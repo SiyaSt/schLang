@@ -25,6 +25,8 @@ public:
     static ExprAST* ParsePrimary();
     static ExprAST* ParseBinOpRHS(int ExprPrec, ExprAST* LHS);
     static ExprAST* ParseExpression();
+    static ExprAST *ParseIfExpr();
+    static ExprAST *ParseForExpr();
     static PrototypeAST* ParsePrototype();
     static FunctionAST* ParseDefinition();
     static FunctionAST* ParseTopLevelExpr();

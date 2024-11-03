@@ -15,6 +15,8 @@ add_executable(schLang main.cpp
         src/Parser.cpp
         src/CallExprAST.h
         src/Parser.h
+        src/IfExprAST.h
+        src/ForExprAST.h
 )
 
 

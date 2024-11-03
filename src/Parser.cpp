@@ -20,6 +20,9 @@
 #include "VariableExprAST.h"
 #include "Parser.h"
 
+#include "ForExprAST.h"
+#include "IfExprAST.h"
+
 
 int Parser::CurTok = 0;
 std::map<char, int> Parser::BinopPrecedence = {};
@@ -134,6 +137,7 @@ ExprAST* Parser::ParseParenExpr()
 ///   ::= identifierexpr
 ///   ::= numberexpr
 ///   ::= parenexpr
+///   ::= ifexpr
 ExprAST* Parser::ParsePrimary()
 {
     switch (CurTok)
@@ -141,6 +145,7 @@ ExprAST* Parser::ParsePrimary()
     case tok_identifier: return ParseIdentifierExpr();
     case tok_number: return ParseNumberExpr();
     case '(': return ParseParenExpr();
+    case tok_if: return ParseIfExpr();
     default: return Error("unknown token when expecting an expression");
     }
 }
@@ -190,6 +195,76 @@ ExprAST* Parser::ParseExpression()
     if (!LHS) return nullptr;
 
     return ParseBinOpRHS(0, LHS);
+}
+
+
+/// ifexpr ::= 'if' expression 'then' expression 'else' expression
+ExprAST* Parser::ParseIfExpr()
+{
+    getNextToken(); // Получаем if.
+
+    // условие.
+    ExprAST* Cond = ParseExpression();
+    if (!Cond) return nullptr;
+
+    if (CurTok != tok_then)
+        return Error("expected then");
+    getNextToken(); // Получаем then
+
+    ExprAST* Then = ParseExpression();
+    if (Then == nullptr) return nullptr;
+
+    if (CurTok != tok_else)
+        return Error("expected else");
+
+    getNextToken();
+
+    ExprAST* Else = ParseExpression();
+    if (!Else) return nullptr;
+
+    return new IfExprAST(Cond, Then, Else);
+}
+
+/// forexpr ::= 'for' identifier '=' expr ',' expr (',' expr)? 'in' expression
+ExprAST *Parser::ParseForExpr() {
+    getNextToken();  // получаем for.
+
+    if (CurTok != tok_identifier)
+        return Error("expected identifier after for");
+
+    std::string IdName = Lexer::IdentifierStr;
+    getNextToken();  // получаем идентификатор.
+
+    if (CurTok != '=')
+        return Error("expected '=' after for");
+    getNextToken();  // получаем '='.
+
+
+    ExprAST *Start = ParseExpression();
+    if (Start == nullptr) return nullptr;
+    if (CurTok != ',')
+        return Error("expected ',' after for start value");
+    getNextToken();
+
+    ExprAST *End = ParseExpression();
+    if (End == nullptr) return nullptr;
+
+    // Значение шага опционально.
+    ExprAST *Step = nullptr;
+    if (CurTok == ',') {
+        getNextToken();
+        Step = ParseExpression();
+        if (Step == nullptr) return nullptr;
+    }
+
+    if (CurTok != tok_in)
+        return Error("expected 'in' after for");
+    getNextToken();  // Получаем 'in'.
+
+    ExprAST *Body = ParseExpression();
+    if (Body == nullptr) return nullptr;
+
+    return new ForExprAST(IdName, Start, End, Step, Body);
 }
 
 /// prototype
@@ -248,6 +323,7 @@ PrototypeAST* Parser::ParseExtern()
     getNextToken(); // получаем extern.
     return ParsePrototype();
 }
+
 
 //===----------------------------------------------------------------------===//
 // Top-Level parsing (Парсинг верхнего уровня)
